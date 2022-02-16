@@ -1,7 +1,22 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    name: frontend
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend
+  labels:
+    name: backend
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: poi
+  namespace: backend
 spec:
   replicas: 1
   selector:
@@ -49,17 +64,18 @@ apiVersion: v1
 kind: Service
 metadata:
   name: poi-service
+  namespace: backend
 spec:
   ports:
     - port: 80
   selector:
     app: poi
-
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: trips
+  namespace: backend
 spec:
   replicas: 1
   selector:
@@ -107,17 +123,18 @@ apiVersion: v1
 kind: Service
 metadata:
   name: trips-service
+  namespace: backend
 spec:
   ports:
     - port: 80
   selector:
     app: trips
-
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: userprofile
+  namespace: backend
 spec:
   replicas: 1
   selector:
@@ -163,6 +180,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: userprofile-service
+  namespace: backend
 spec:
   ports:
     - port: 80
@@ -178,12 +196,12 @@ spec:
     - port: 80
   selector:
     app: trips
-
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-java
+  namespace: backend
 spec:
   replicas: 1
   selector:
@@ -229,6 +247,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: user-java-service
+  namespace: backend
 spec:
   ports:
     - port: 80
@@ -239,6 +258,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tripviewer
+  namespace: frontend
 spec:
   replicas: 1
   selector:
@@ -256,9 +276,9 @@ spec:
           image: registryntt1010.azurecr.io/tripviewer:kmazurek_1.0
           env:
             - name: TRIPS_API_ENDPOINT
-              value: http://trips-service:80
+              value: http://trips-service.backend:80
             - name: USERPROFILE_API_ENDPOINT
-              value: http://userprofile-service:80
+              value: http://userprofile-service.backend:80
           resources:
             requests:
               cpu: 100m
@@ -274,30 +294,127 @@ apiVersion: v1
 kind: Service
 metadata:
   name: tripviewer-service
+  namespace: frontend
 spec:
   ports:
     - port: 80
   selector:
     app: tripviewer
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: tripviewer-front
+  namespace: frontend
 spec:
   type: LoadBalancer
   ports:
     - port: 80
   selector:
     app: tripviewer
-
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: sql-auth
+  namespace: backend
 type: kubernetes.io/basic-auth
 stringData:
   username: sqladminnTt1010
   password: nV9zl6Qp9
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-dev-backend
+  namespace: backend
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-dev-backend-rolebinding
+  namespace: backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: web-dev-backend
+subjects:
+  - kind: Group
+    namespace: backend
+    name: e3c335eb-a16b-42d4-bee9-966d1c3840cf
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-dev-frontend
+  namespace: frontend
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-dev-frontend-rolebinding
+  namespace: frontend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: web-dev-frontend
+subjects:
+  - kind: Group
+    namespace: frontend
+    name: e3c335eb-a16b-42d4-bee9-966d1c3840cf
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-dev-backend
+  namespace: backend
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-dev-backend-rolebinding
+  namespace: backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: api-dev-backend
+subjects:
+  - kind: Group
+    namespace: backend
+    name: 4700bbe2-84fd-402e-93e6-4482eb0d9337
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-dev-frontend
+  namespace: frontend
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-dev-frontend-rolebinding
+  namespace: frontend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: api-dev-frontend
+subjects:
+  - kind: Group
+    namespace: frontend
+    name: 4700bbe2-84fd-402e-93e6-4482eb0d9337
