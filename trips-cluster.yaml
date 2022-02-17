@@ -322,6 +322,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    test: tripviewer
   name: tripviewer
   namespace: frontend
 spec:
@@ -727,3 +729,26 @@ data:
 metadata:
   name: container-azm-ms-agentconfig
   namespace: kube-system
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: block-network-policy
+  namespace: backend
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: frontend
+        - podSelector:
+            matchLabels:
+              test: tripviewer
+      ports:
+        - protocol: TCP
+          port: 80
+  egress: []

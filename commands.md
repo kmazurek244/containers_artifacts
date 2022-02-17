@@ -69,5 +69,17 @@ az keyvault set-policy -n kv-tripcluster-dev --certificate-permissions get --spn
 
 az aks enable-addons -a monitoring -n TripCluster -g teamResources
 
+az aks update -g teamResources -n TripCluster --enable-pod-identity --enable-pod-identity-with-kubenet # TODO: set policy
+
+az aks enable-addons --addons azure-policy --name TripCluster --resource-group teamResources
+
+az aks show --query addonProfiles.azurepolicy -g teamResources -n TripCluster
+
+az policy remediation create --name myRemediation --policy-assignment '/subscriptions/{subscriptionId}/providers/Microsoft.Authorization/policyAssignments/{myAssignmentId}'
+/providers/Microsoft.Authorization/policyDefinitions/95edb821-ddaf-4404-9732-666045e056b4
+
+kubectl get pods -n kube-system
+kubectl get pods -n gatekeeper-system
+az aks show --query addonProfiles.azurepolicy -g teamResources -n TripCluster
 
 ```
