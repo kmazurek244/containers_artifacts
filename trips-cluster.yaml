@@ -12,6 +12,37 @@ metadata:
   labels:
     name: backend
 ---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kv
+  namespace: backend
+spec:
+  provider: azure
+  secretObjects:
+    - secretName: sql
+      type: Opaque
+      data:
+        - objectName: sql-username
+          key: username
+        - objectName: sql-password
+          key: password
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"
+    userAssignedIdentityID: 14222f08-8910-4a4a-9eba-78bf6f3b47b6
+    keyvaultName: kv-tripcluster-dev
+    cloudName: ""
+    objects: |
+      array:
+        - |
+          objectName: sql-username
+          objectType: secret
+        - |
+          objectName: sql-password
+          objectType: secret
+    tenantId: c0414387-ee8a-411f-b21e-8d7fce2af971
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,16 +63,20 @@ spec:
       containers:
         - name: poi
           image: registryntt1010.azurecr.io/poi:kmazurek_1.0
+          volumeMounts:
+            - name: secrets-store01-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           env:
             - name: SQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: username
             - name: SQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: password
             - name: SQL_SERVER
               value: sqlserverntt1010.database.windows.net
@@ -59,6 +94,13 @@ spec:
           ports:
             - containerPort: 80
               name: redis
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-kv
 ---
 apiVersion: v1
 kind: Service
@@ -91,16 +133,20 @@ spec:
       containers:
         - name: trips
           image: registryntt1010.azurecr.io/trips:kmazurek_1.0
+          volumeMounts:
+            - name: secrets-store01-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           env:
             - name: SQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: username
             - name: SQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: password
             - name: SQL_SERVER
               value: sqlserverntt1010.database.windows.net
@@ -118,6 +164,13 @@ spec:
           ports:
             - containerPort: 80
               name: redis
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-kv
 ---
 apiVersion: v1
 kind: Service
@@ -150,16 +203,20 @@ spec:
       containers:
         - name: userprofile
           image: registryntt1010.azurecr.io/userprofile:dominic_1.0
+          volumeMounts:
+            - name: secrets-store01-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           env:
             - name: SQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: username
             - name: SQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: password
             - name: SQL_SERVER
               value: sqlserverntt1010.database.windows.net
@@ -175,6 +232,13 @@ spec:
           ports:
             - containerPort: 80
               name: redis
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-kv
 ---
 apiVersion: v1
 kind: Service
@@ -186,16 +250,6 @@ spec:
     - port: 80
   selector:
     app: userprofile
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: trips-service
-spec:
-  ports:
-    - port: 80
-  selector:
-    app: trips
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -217,16 +271,20 @@ spec:
       containers:
         - name: user-java
           image: registryntt1010.azurecr.io/user-java:dominic_1.0
+          volumeMounts:
+            - name: secrets-store01-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           env:
             - name: SQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: username
             - name: SQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: sql-auth
+                  name: sql
                   key: password
             - name: SQL_SERVER
               value: sqlserverntt1010.database.windows.net
@@ -242,6 +300,13 @@ spec:
           ports:
             - containerPort: 80
               name: redis
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-kv
 ---
 apiVersion: v1
 kind: Service
@@ -312,16 +377,6 @@ spec:
     - port: 80
   selector:
     app: tripviewer
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sql-auth
-  namespace: backend
-type: kubernetes.io/basic-auth
-stringData:
-  username: sqladminnTt1010
-  password: nV9zl6Qp9
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -418,3 +473,4 @@ subjects:
   - kind: Group
     namespace: frontend
     name: 4700bbe2-84fd-402e-93e6-4482eb0d9337
+---
